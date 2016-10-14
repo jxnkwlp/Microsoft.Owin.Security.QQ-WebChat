@@ -34,22 +34,21 @@ QQ 和微信 Owin 扩展
 
 - 微信
 
-  ``` csharp
+``` csharp
     // 配置 
     app.UseWeixinAuthentication("[you appId]", "[you app Secret]");  
 
     // 获取微信登录者信息
     var weixinInfo = await AuthenticationManager.GetExternalWeixinLoginInfoAsync();   
     
-    ```
+```
 
 - QQ
 
-    ``` csharp
+``` csharp
     // 配置 
     app.UseQQAuthentication("[you appId]", "[you app Secret]");  
 
     // 获取QQ登录者信息
     var qqInfo = await AuthenticationManager.GetExternalQQLoginInfoAsync();    
-    
-    ```
+```
