@@ -8,6 +8,11 @@ namespace Microsoft.Owin.Security
 {
     public static class AuthenticationManagerExtensions
     {
+        /// <summary>
+        ///  Get an dictionary from external login info
+        /// </summary>
+        /// <param name="manager"></param>
+        /// <returns>All keys: openid,nickname,sex,language,city,province,country,headimgurl,privilege,unionid,</returns>
         public static async Task<Dictionary<string, string>> GetExternalWeixinLoginInfoAsync(this IAuthenticationManager manager)
         {
             return await GetExternalWeixinLoginInfoAsync(manager, "ExternalCookie");
