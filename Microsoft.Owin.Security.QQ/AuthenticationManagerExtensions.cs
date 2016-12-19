@@ -8,11 +8,6 @@ namespace Microsoft.Owin.Security
 {
     public static class AuthenticationManagerExtensions
     {
-        /// <summary>
-        ///   Get an dictionary from external login info
-        /// </summary>
-        /// <param name="manager"></param>
-        /// <returns>All keys: ret,msg,is_lost,nickname,gender,province,city,year,figureurl,figureurl_1,figureurl_2,figureurl_qq_1,figureurl_qq_2,is_yellow_vip,vip,yellow_vip_level,level,is_yellow_year_vip</returns>
         public static async Task<Dictionary<string, string>> GetExternalQQLoginInfoAsync(this IAuthenticationManager manager)
         {
             return await GetExternalQQLoginInfoAsync(manager, "ExternalCookie");

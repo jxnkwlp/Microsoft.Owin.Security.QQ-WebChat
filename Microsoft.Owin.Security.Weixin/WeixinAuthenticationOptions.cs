@@ -46,6 +46,11 @@ namespace Microsoft.Owin.Security.Weixin
         /// 应用密钥 AppSecret ，在微信开放平台提交应用审核通过后获得
         /// </summary>
         public string AppSecret { get; set; }
+        /// <summary>
+        /// 微信服务器主机
+        /// 详细请参考：https://mp.weixin.qq.com/wiki?id=mp1465199793_BqlKA&t=0.2918104504400387
+        /// </summary>
+        public string ApiHost { set; get; }
 
         public WeixinAuthenticationOptions() : base(Constants.DefaultAuthenticationType)
         {

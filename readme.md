@@ -1,4 +1,4 @@
-# Microsoft.Owin.Security Extensions
+ï»¿# Microsoft.Owin.Security Extensions
 
 QQ and Webchat extensions for Microsoft.Owin.Security
 
@@ -9,6 +9,19 @@ QQ and Webchat extensions for Microsoft.Owin.Security
 ``` csharp
     // config 
     app.UseWeixinAuthentication("[you appId]", "[you app Secret]");
+
+    // get external login info 
+    var weixinInfo = await AuthenticationManager.GetExternalWeixinLoginInfoAsync(); 
+```
+
+- Webchat MP
+
+``` csharp
+    // mp config 
+    app.UseWeixinAuthentication(new WeixinMPAuthenticationOptions{
+        AppId = "[you appId]", 
+        AppSecret = "[you app Secret]"
+    });
 
     // get external login info 
     var weixinInfo = await AuthenticationManager.GetExternalWeixinLoginInfoAsync(); 
@@ -26,19 +39,33 @@ QQ and Webchat extensions for Microsoft.Owin.Security
 
  
 
-# Microsoft.Owin.Security À©Õ¹
+# Microsoft.Owin.Security æ‰©å±•
 
-QQ ºÍÎ¢ĞÅ Owin À©Õ¹
+QQ å’Œå¾®ä¿¡ Owin æ‰©å±•
 
-## Ê¹ÓÃ·½·¨
+## ä½¿ç”¨æ–¹æ³•
 
-- Î¢ĞÅ
+- å¾®ä¿¡
 
 ``` csharp
-    // ÅäÖÃ 
+    // é…ç½® 
     app.UseWeixinAuthentication("[you appId]", "[you app Secret]");  
 
-    // »ñÈ¡Î¢ĞÅµÇÂ¼ÕßĞÅÏ¢
+    // è·å–å¾®ä¿¡ç™»å½•è€…ä¿¡æ¯
+    var weixinInfo = await AuthenticationManager.GetExternalWeixinLoginInfoAsync();   
+    
+```
+
+- å¾®ä¿¡å…¬ä¼—å·
+
+``` csharp
+    // é…ç½® 
+    app.UseWeixinAuthentication(new WeixinMPAuthenticationOptions{
+        AppId = "[you appId]", 
+        AppSecret = "[you app Secret]"
+    });  
+
+    // è·å–å¾®ä¿¡ç™»å½•è€…ä¿¡æ¯
     var weixinInfo = await AuthenticationManager.GetExternalWeixinLoginInfoAsync();   
     
 ```
@@ -46,9 +73,9 @@ QQ ºÍÎ¢ĞÅ Owin À©Õ¹
 - QQ
 
 ``` csharp
-    // ÅäÖÃ 
+    // é…ç½® 
     app.UseQQAuthentication("[you appId]", "[you app Secret]");  
 
-    // »ñÈ¡QQµÇÂ¼ÕßĞÅÏ¢
+    // è·å–QQç™»å½•è€…ä¿¡æ¯
     var qqInfo = await AuthenticationManager.GetExternalQQLoginInfoAsync();    
 ```
