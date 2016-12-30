@@ -14,7 +14,14 @@ namespace Microsoft.Owin.Security.Weixin
     /// </summary>
     internal class WeixinAuthenticationHandler : AuthenticationHandler<WeixinAuthenticationOptions>
     {
-        private const string AuthorizationEndpoint = "https://open.weixin.qq.com/connect/qrconnect";
+        /// <summary>
+        /// 开放平台授权地址
+        /// </summary>
+        private const string OpenAuthorizationEndpoint = "https://open.weixin.qq.com/connect/qrconnect";
+        /// <summary>
+        /// 公众号授权地址
+        /// </summary>
+        private const string MPAuthorizationEndpoint = "https://open.weixin.qq.com/connect/oauth2/authorize";
         private const string TokenEndpoint = "https://api.weixin.qq.com/sns/oauth2/access_token";
         private const string TokenRefreshEndpoint = "https://api.weixin.qq.com/sns/oauth2/refresh_token";
         private const string UserInfoEndpoint = "https://api.weixin.qq.com/sns/userinfo";
@@ -27,7 +34,59 @@ namespace Microsoft.Owin.Security.Weixin
             this._httpClient = httpClient;
             this._logger = logger;
         }
-
+        /// <summary>
+        /// 生成状态码
+        /// 因微信公众号授权对state字段的限制，这里改为使用Cookie存储数据
+        /// 详细请参考：https://mp.weixin.qq.com/wiki?id=mp1465199793_BqlKA&t=0.2918104504400387
+        /// </summary>
+        /// <param name="extra"></param>
+        /// <returns></returns>
+        private string GenerateStateId(AuthenticationProperties extra)
+        {
+            string stateId = Guid.NewGuid().ToString().Replace("-", "");
+            extra.Dictionary["stateId"] = stateId;
+            string key = string.Format("_{0}State_{1}", base.Options.AuthenticationType, stateId);
+            string stateValue = base.Options.StateDataFormat.Protect(extra);
+            base.Response.Cookies.Append(key, stateValue, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = base.Request.IsSecure
+            });
+            return stateId;
+        }
+        /// <summary>
+        /// 验证状态码有效性
+        /// </summary>
+        /// <param name="stateId"></param>
+        /// <param name="extra"></param>
+        /// <returns></returns>
+        private bool ValidateStateId(string stateId, out AuthenticationProperties extra)
+        {
+            string key = string.Format("_{0}State_{1}", base.Options.AuthenticationType, stateId);
+            string protectedText = base.Request.Cookies[key];
+            bool flag = string.IsNullOrWhiteSpace(protectedText);
+            bool result;
+            if (flag)
+            {
+                extra = null;
+                result = false;
+            }
+            else
+            {
+                extra = base.Options.StateDataFormat.Unprotect(protectedText);
+                bool flag2 = extra == null || !extra.Dictionary.ContainsKey("stateId") || extra.Dictionary["stateId"] != stateId;
+                if (flag2)
+                {
+                    extra = null;
+                    result = false;
+                }
+                else
+                {
+                    result = true;
+                }
+            }
+            return result;
+        }
         public override async Task<bool> InvokeAsync()
         {
             // return base.InvokeAsync();
@@ -57,9 +116,7 @@ namespace Microsoft.Owin.Security.Weixin
                 {
                     state = values[0];
                 }
-
-                properties = Options.StateDataFormat.Unprotect(state);
-                if (properties == null)
+                if (!ValidateStateId(state, out properties))
                 {
                     return null;
                 }
@@ -114,11 +171,11 @@ namespace Microsoft.Owin.Security.Weixin
                 var context = new WeixinAuthenticatedContext(Context, userInformation, accessToken, refreshToken, expire);
 
                 context.Identity = new ClaimsIdentity(new[] {
-                    new Claim(ClaimTypes.NameIdentifier, context.UnionId, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
+                    new Claim(ClaimTypes.NameIdentifier, context.UserId, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
                     new Claim(ClaimTypes.Name, context.Nickame, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
-                    new Claim("urn:weixinconnect:id", context.UnionId, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
+                    new Claim("urn:weixinconnect:id", context.UserId, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
                     new Claim("urn:weixinconnect:name", context.Nickame, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
-
+                    new Claim("urn:weixinconnect:openid", context.OpenId, "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
                     new Claim( Constants.WeixinClaimType ,  userInformation.ToString() , "http://www.w3.org/2001/XMLSchema#string", Options.AuthenticationType),
                 }, Options.AuthenticationType, ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
 
@@ -172,16 +229,43 @@ namespace Microsoft.Owin.Security.Weixin
 
                 // OAuth2 10.12 CSRF
                 GenerateCorrelationId(extra);
-
-                string scope = string.Join(",", Options.Scope);
-
-                string state = Options.StateDataFormat.Protect(extra);
-
-                string authorizationEndpoint = string.Format(AuthorizationEndpoint + "?appid={0}&redirect_uri={1}&response_type=code&scope={2}&state={3}#wechat_redirect",
+                string stateId = GenerateStateId(extra);
+                string scope = null;
+                string endPoint = null;
+                WeixinMPAuthenticationOptions mpOptions = Options as WeixinMPAuthenticationOptions;
+                if (mpOptions != null)
+                {
+                    scope = mpOptions.Scope;
+                    endPoint = MPAuthorizationEndpoint;
+                }
+                else
+                {
+                    scope = string.Join(",", Options.Scope);
+                    endPoint = OpenAuthorizationEndpoint;
+                }
+                bool hasHost = !string.IsNullOrWhiteSpace(base.Options.ApiHost);
+                if (hasHost)
+                {
+                    string host = base.Options.ApiHost;
+                    Uri uri;
+                    if (Options.ApiHost.IndexOf(":") > 0 && Uri.TryCreate(host, UriKind.RelativeOrAbsolute, out uri))
+                    {
+                        Uri endPointUri = new Uri(endPoint);
+                        endPoint = new Uri(uri, endPointUri.PathAndQuery).ToString();
+                    }
+                    else
+                    {
+                        endPoint = new UriBuilder(endPoint)
+                        {
+                            Host = host
+                        }.ToString();
+                    }
+                }
+                string authorizationEndpoint = string.Format(endPoint + "?appid={0}&redirect_uri={1}&response_type=code&scope={2}&state={3}#wechat_redirect",
                     Uri.EscapeDataString(Options.AppId),
                     Uri.EscapeDataString(redirectUri),
                     Uri.EscapeDataString(scope),
-                    Uri.EscapeDataString(state));
+                    Uri.EscapeDataString(stateId));
 
                 Context.Response.Redirect(authorizationEndpoint);
 

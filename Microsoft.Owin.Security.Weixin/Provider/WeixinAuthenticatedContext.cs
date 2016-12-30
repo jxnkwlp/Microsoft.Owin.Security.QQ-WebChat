@@ -54,6 +54,10 @@ namespace Microsoft.Owin.Security.Weixin
         public string Country { get; set; }
         public string HeadimgUrl { get; set; }
         public string Privilege { get; set; }
+        /// <summary>
+        /// 当UnionId不为空时，用户Id为<see cref="UnionId"/>，否则为 <see cref="OpenId"/>
+        /// </summary>
+        public string UserId { private set; get; }
 
         public WeixinAuthenticatedContext(IOwinContext context, JObject user, string accessToken, string refreshToken, string expires) : base(context)
         {
@@ -70,12 +74,6 @@ namespace Microsoft.Owin.Security.Weixin
                 this.ExpiresIn = new TimeSpan?(TimeSpan.FromSeconds((double)num));
             }
 
-            JToken jToken = this.User["unionid"];
-            if (jToken == null)
-            {
-                throw new ArgumentException("user not found. ");
-            }
-
             this.OpenId = GetSafeValue("openid", user);
             this.Nickame = GetSafeValue("nickname", user);
             this.Sex = GetSafeValue("sex", user);
@@ -85,6 +83,20 @@ namespace Microsoft.Owin.Security.Weixin
             this.HeadimgUrl = GetSafeValue("headimgurl", user);
             this.Privilege = GetSafeValue("privilege", user);
             this.UnionId = GetSafeValue("unionid", user);
+
+            if (string.IsNullOrWhiteSpace(this.UnionId))
+            {
+                this.UserId = OpenId;
+            }
+            else
+            {
+                this.UserId = UnionId;
+            }
+
+            if (string.IsNullOrWhiteSpace(this.UserId))
+            {
+                throw new ArgumentException("user not found. ");
+            }
         }
 
         private static string GetSafeValue(string name, IDictionary<string, JToken> dictionary)
