@@ -2,6 +2,9 @@
 
 QQ and Webchat extensions for Microsoft.Owin.Security
 
+>  # For dotnet core 1.1 and 2.0   
+>   https://github.com/jxnkwlp/AspNetCore.AuthenticationQQ-WebChat
+
 ## Get Started
 
 - Webchat
